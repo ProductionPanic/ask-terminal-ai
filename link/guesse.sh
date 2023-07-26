@@ -1,0 +1,1 @@
+/usr/local/bin/gptcli/guesseCommand.sh

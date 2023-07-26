@@ -13,6 +13,12 @@ def log(message):
     if verbose:
         print(message)
 
+
+def output(response):
+    console = Console()
+    console.print('[bold][white]Description:[/white][/bold]')
+    console.print('[blue]' + response + '[/blue]', end="\n\n")
+
 def guessCommand(message):
     message = message.strip()
     console = Console()
@@ -25,28 +31,26 @@ def guessCommand(message):
         },
         {
             'role': 'creator',
-            'content': 'You shall respond in using the following format: <command> | <extra info>'
+            'content': 'You shall respond in using the following format: <command> | <extra info> |'
         },
         {
             'role': 'creator',
-            'content': 'What is the command to list all files in a directory?'
+            'content': 'how to: What is the command to list all files in a directory?'
         },
         {
             'role': 'gpt',
-            'content': 'ls -la | list all files in a directory'
-        },
-        {
-            'role': 'gpt',
-            'content': 'Any other commands?'
+            'content': 'ls -la | list all files in a directory |'
         },
         {
             'role': 'user',
             'content': "how to: " + message
         }
     ])
+
     if not stream:
         responses = responses.split(' ')
         responses = [' ' + x for x in responses]
+
     console.print('[underline][red][bold]WARNING[/bold] use at your own risk![/red][/underline]', end="\n")
     console.print('[bold][blue]Guessing command...[/blue][/bold]', end="\n\n")
     console.print('[bold][white]Command:[/white][/bold]', end="\n")
@@ -55,19 +59,35 @@ def guessCommand(message):
         'command': "",
         'description': ""
     }
+    command_printed = False
+    end_reached = False
     for response in responses:
-        if '|' in response:
+        if end_reached:
+            continue
+
+        if '|' in response and not command_printed:
+            command_printed = True
             output['command'] = sentence.strip()
-            print()
-            console.print('[bold][white]Description:[/white][/bold]')
             sentence = ""
-        else:
-            sentence += response
+            print('\n')
+            console.print('[bold][white]Description:[/white][/bold]')
+            continue
+        elif '|' in response and command_printed:
+            output['description'] = sentence.strip()
+            end_reached = True
+            continue
+
+        sentence += response
         sentence = sentence.strip()
-        console.print('[green]' + sentence + '[/green]', end="\r")
-    output['description'] = sentence.strip()
+
+        if command_printed:
+            console.print('[blue]' + sentence + '[/blue]', end="\r")
+        else:
+            console.print('[green]' + sentence + '[/green]', end="\r")
+
     print()
     return output
+
 
 def copy_to_clipboard(text):
     log("Copying to clipboard: " + text)
@@ -86,12 +106,43 @@ def main():
     arg_string = ' '.join(args)
     resp = guessCommand(arg_string)
     command = resp['command']
-    copy_to_clipboard(command)
+    print()
     console = Console()
-    console.print('\n[bold][cyan]Copied to clipboard![/cyan][/bold]')
+    console.print('[bold][cyan]Do you want to copy the command to clipboard?[/cyan][/bold] (y/n)', end=" ")
+    response = input()
+    if response == 'y':
+        copy_to_clipboard(command)
+        console.print('[bold][green]Copied to clipboard![/green][/bold]')
 
-def close_client_session():
-    g4f.ChatCompletion.close_client_session()
 
 if __name__ == "__main__":
+    console = Console()
+    args = sys.argv[1:]
+    if '--help' in args or '-h' in args:
+        console.print('[bold][white]Usage:[/white][/bold]', end="\n")
+        console.print('[magenta]ask[/magenta][cyan] [options] <question>[/cyan]', end="\n\n")
+        console.print('[bold][white]options:[/white][/bold]', end="\n")
+        console.print('[cyan]--path <path>[/cyan]', end="\n\n")
+        console.print('[bold][white]Description:[/white][/bold]', end="\n")
+        console.print('[magenta]ask[/magenta] [white]is a command line tool that guesses terminal commands based on a question or input[/white]', end="\n\n")
+        console.print('[bold][white]Examples:[/white][/bold]', end="\n")
+        console.print('[cyan][magenta]ask[/magenta] how to list all files in a directory[/cyan]', end="\n")
+        console.print('[blue]->\tls -la[/blue]', end="\n\n")
+        console.print('[cyan][magenta]ask[/magenta] how to list all files in a directory --path /home/user[/cyan]', end="\n")
+        console.print('[blue]->\tls -la /home/user[/blue]', end="\n\n")
+        console.print('[cyan][magenta]ask[/magenta] delete all files in a directory[/cyan]', end="\n")
+        console.print('[blue]->\trm -rf *[/blue]', end="\n\n")
+
+        sys.exit(0)
+
+        print("Options:")
+        print("  --path <path>  Path to execute from")
+
+        sys.exit(0)
+
+    if '--path' in args:
+        path = args[args.index('--path') + 1]
+        args.remove('--path')
+        args.remove(path)
+        sys.path.insert(0, path)
     main()

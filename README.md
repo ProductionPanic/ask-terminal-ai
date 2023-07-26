@@ -1,1 +1,0 @@
-# ask-terminal-ai

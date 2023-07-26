@@ -6,3 +6,6 @@ certifi
 browser_cookie3
 websockets
 pyexecjs
+g4f
+pyperclip
+rich
